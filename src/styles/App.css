@@ -1,0 +1,17 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.app.nav-collapsed {
+  /* 當導航欄收縮時，主內容區域可以獲得更多空間 */
+}
+ 
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+} 
