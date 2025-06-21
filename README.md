@@ -31,21 +31,44 @@
 
 ## 快速開始
 
+⚠️ **重要提醒**: 本項目使用 `.gitignore` 排除了以下目錄，需要手動創建：
+- `venv/` - Python虛擬環境
+- `node_modules/` - Node.js依賴
+- `models/` - 本地模型文件
+- `vector_db/` - 向量數據庫存儲
+
+**詳細安裝步驟請參考 [INSTALLATION.md](INSTALLATION.md)**
+
+**快速設置 (推薦新用戶):**
+```bash
+# 運行自動設置腳本
+python setup.py
+```
+
 ### 1. 環境準備
 
 **系統要求:**
 - Python 3.8+
 - Node.js 16+
 - 8GB+ RAM
-- 10GB+ 可用磁盤空間
+- 50GB+ 可用磁盤空間 (包含模型文件)
 
-**安裝依賴:**
+**快速安裝:**
 ```bash
-# Python依賴
+# 1. 創建Python虛擬環境
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+# 或 venv\Scripts\activate  # Windows
+
+# 2. 安裝Python依賴
 pip install -r requirements.txt
 
-# Node.js依賴
+# 3. 安裝Node.js依賴
 npm install
+
+# 4. 創建必要目錄
+mkdir -p data/{processed,summaries,chat_history,uploads}
+mkdir -p vector_db models
 ```
 
 ### 2. 本地LLM服務設置(建議更換成更高階的model)
@@ -217,6 +240,7 @@ local-rag-system/
 ├── config.py              # 系統配置
 ├── requirements.txt       # Python依賴
 ├── package.json           # Node.js依賴
+├── .gitignore            # Git忽略文件配置
 ├── src/                   # React前端源碼
 │   ├── components/        # React組件
 │   ├── pages/            # 頁面組件
@@ -225,9 +249,15 @@ local-rag-system/
 ├── data/                 # 數據目錄
 │   ├── processed/        # 處理後的文本
 │   ├── summaries/        # 文檔摘要
-│   └── chat_history/     # 聊天記錄
-└── vector_db/            # 向量數據庫
+│   ├── chat_history/     # 聊天記錄
+│   └── uploads/          # 上傳文件暫存
+├── vector_db/            # 向量數據庫 (需手動創建)
+├── models/               # 本地模型文件 (需手動創建)
+├── venv/                 # Python虛擬環境 (需手動創建)
+└── node_modules/         # Node.js依賴 (npm install創建)
 ```
+
+**注意**: 標記為"需手動創建"的目錄已被 `.gitignore` 排除，請參考安裝指南創建。
 
 ## 故障排除
 
