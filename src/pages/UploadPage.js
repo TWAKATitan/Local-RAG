@@ -35,6 +35,47 @@ const UploadPage = () => {
     issues: []
   });
 
+  // 定義 saveUploadState 函數，需要在 useEffect 之前定義
+  const saveUploadState = useCallback(async () => {
+    if (!stateId) return;
+    
+    try {
+      // 只保存待處理和處理中的文件，並確保包含所有必要信息
+      const filesToSave = files.filter(file => 
+        file.status === 'ready' || file.status === 'pending' || file.status === 'processing' || file.status === 'error'
+      ).map(file => ({
+        id: file.id,
+        name: file.name,
+        size: file.size,
+        status: file.status,
+        progress: file.progress || 0,
+        error: file.error,
+        result: file.result,
+        currentStep: file.currentStep,
+        processingSteps: file.processingSteps,
+        // 不保存實際的File對象，只保存基本信息
+        fileInfo: {
+          name: file.name,
+          size: file.size,
+          type: file.file?.type || 'application/pdf',
+          lastModified: file.file?.lastModified || Date.now()
+        }
+      }));
+
+      if (filesToSave.length > 0) {
+        await updateUploadState(stateId, filesToSave);
+        console.log(`上傳狀態已保存: ${filesToSave.length} 個文件`);
+      } else {
+        // 如果沒有需要保存的文件，清空狀態
+        await updateUploadState(stateId, []);
+        console.log('上傳狀態已清空（無處理中文件）');
+      }
+    } catch (error) {
+      console.error('保存上傳狀態失敗:', error);
+      // 保存失敗不影響正常使用
+    }
+  }, [stateId, files]);
+
   // 初始化安全上傳狀態
   useEffect(() => {
     initializeSecureUploadState();
@@ -69,16 +110,10 @@ const UploadPage = () => {
 
       return () => clearTimeout(saveTimer);
     }
-  }, [files, stateId]);
+  }, [files, stateId, saveUploadState]);
 
-  // 自動開始處理等待中的文件
-  useEffect(() => {
-    const pendingFiles = files.filter(f => f.status === 'pending' && f.file);
-    if (pendingFiles.length > 0 && !isProcessing) {
-      console.log(`發現 ${pendingFiles.length} 個等待處理的文件，自動開始處理`);
-      processFiles();
-    }
-  }, [files, isProcessing]);
+  // 移除自動處理邏輯，改為手動控制
+  // 用戶上傳文件後，需要手動點擊「開始處理」按鈕才會開始處理
 
   const initializeSecureUploadState = async () => {
     try {
@@ -99,7 +134,7 @@ const UploadPage = () => {
             // 恢復文件狀態
             if (response.files && response.files.length > 0) {
               const activeFiles = response.files.filter(file => 
-                file.status === 'pending' || file.status === 'processing' || file.status === 'error'
+                file.status === 'ready' || file.status === 'pending' || file.status === 'processing' || file.status === 'error'
               ).map(file => ({
                 ...file,
                 // 恢復的文件沒有實際File對象，但保留所有其他信息
@@ -119,13 +154,13 @@ const UploadPage = () => {
                 console.log(`恢復 ${activeFiles.length} 個處理中的文件`);
                 setFiles(activeFiles);
                 
-                // 檢查是否有需要標記為錯誤的文件（沒有file對象的pending文件）
-                const invalidFiles = activeFiles.filter(f => f.status === 'pending' && !f.file);
+                // 檢查是否有需要標記為錯誤的文件（沒有file對象的ready/pending文件）
+                const invalidFiles = activeFiles.filter(f => (f.status === 'ready' || f.status === 'pending') && !f.file);
                 if (invalidFiles.length > 0) {
                   console.log(`發現 ${invalidFiles.length} 個需要重新選擇的文件`);
                   setTimeout(() => {
                     setFiles(prev => prev.map(f => {
-                      if (f.status === 'pending' && !f.file) {
+                      if ((f.status === 'ready' || f.status === 'pending') && !f.file) {
                         return {
                           ...f,
                           status: 'error',
@@ -163,46 +198,6 @@ const UploadPage = () => {
     } catch (error) {
       console.error('初始化安全上傳狀態失敗:', error);
       setStateError('無法創建安全上傳狀態，某些功能可能不可用');
-    }
-  };
-
-  const saveUploadState = async () => {
-    if (!stateId) return;
-    
-    try {
-      // 只保存待處理和處理中的文件，並確保包含所有必要信息
-      const filesToSave = files.filter(file => 
-        file.status === 'pending' || file.status === 'processing' || file.status === 'error'
-      ).map(file => ({
-        id: file.id,
-        name: file.name,
-        size: file.size,
-        status: file.status,
-        progress: file.progress || 0,
-        error: file.error,
-        result: file.result,
-        currentStep: file.currentStep,
-        processingSteps: file.processingSteps,
-        // 不保存實際的File對象，只保存基本信息
-        fileInfo: {
-          name: file.name,
-          size: file.size,
-          type: file.file?.type || 'application/pdf',
-          lastModified: file.file?.lastModified || Date.now()
-        }
-      }));
-
-      if (filesToSave.length > 0) {
-        await updateUploadState(stateId, filesToSave);
-        console.log(`上傳狀態已保存: ${filesToSave.length} 個文件`);
-      } else {
-        // 如果沒有需要保存的文件，清空狀態
-        await updateUploadState(stateId, []);
-        console.log('上傳狀態已清空（無處理中文件）');
-      }
-    } catch (error) {
-      console.error('保存上傳狀態失敗:', error);
-      // 保存失敗不影響正常使用
     }
   };
 
@@ -295,7 +290,7 @@ const UploadPage = () => {
       file, // 保留實際的File對象用於上傳
       name: file.name,
       size: file.size,
-      status: 'pending', // pending, processing, completed, error
+      status: 'ready', // ready, processing, completed, error
       progress: 0,
       error: null,
       result: null,
@@ -518,22 +513,22 @@ const UploadPage = () => {
   };
 
   const processFiles = async () => {
-    // 只處理有實際File對象且狀態為pending的文件
-    const pendingFiles = files.filter(f => f.status === 'pending' && f.file);
-    if (pendingFiles.length === 0) {
+    // 只處理有實際File對象且狀態為ready的文件
+    const readyFiles = files.filter(f => f.status === 'ready' && f.file);
+    if (readyFiles.length === 0) {
       setIsProcessing(false);
       return;
     }
     
-    console.log(`開始處理 ${pendingFiles.length} 個等待中的文件`);
+    console.log(`開始處理 ${readyFiles.length} 個準備好的文件`);
     setIsProcessing(true);
     
-    for (let i = 0; i < pendingFiles.length; i++) {
-      const file = pendingFiles[i];
+    for (let i = 0; i < readyFiles.length; i++) {
+      const file = readyFiles[i];
       
       // 再次檢查文件狀態，防止在處理過程中狀態被改變
       const currentFile = files.find(f => f.id === file.id);
-      if (!currentFile || currentFile.status !== 'pending' || !currentFile.file) {
+      if (!currentFile || currentFile.status !== 'ready' || !currentFile.file) {
         console.log(`跳過文件 ${file.name}，狀態已改變或文件對象無效`);
         continue;
       }
@@ -635,7 +630,7 @@ const UploadPage = () => {
       }
       
       // Add delay between files
-      if (i < pendingFiles.length - 1) {
+      if (i < readyFiles.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
@@ -683,6 +678,8 @@ const UploadPage = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
+      case 'ready':
+        return <FaUpload size={16} className="status-icon status-ready" />;
       case 'pending':
         return <FaClock size={16} className="status-icon status-pending" />;
       case 'processing':
@@ -698,6 +695,8 @@ const UploadPage = () => {
 
   const getStatusText = (file) => {
     switch (file.status) {
+      case 'ready':
+        return '準備處理';
       case 'pending':
         return '等待處理';
       case 'processing':
@@ -712,7 +711,8 @@ const UploadPage = () => {
   };
 
   const allFiles = [...existingDocuments, ...files];
-  const pendingCount = files.filter(f => f.status === 'pending').length;
+  const readyCount = files.filter(f => f.status === 'ready').length;
+  const processingCount = files.filter(f => f.status === 'processing').length;
   const completedCount = files.filter(f => f.status === 'completed').length + existingDocuments.length;
   const errorCount = files.filter(f => f.status === 'error').length;
 
@@ -741,8 +741,12 @@ const UploadPage = () => {
             <span className="stat-label">總文件</span>
           </div>
           <div className="stat-item">
-            <span className="stat-number">{pendingCount}</span>
-            <span className="stat-label">等待中</span>
+            <span className="stat-number">{readyCount}</span>
+            <span className="stat-label">準備處理</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">{processingCount}</span>
+            <span className="stat-label">處理中</span>
           </div>
           <div className="stat-item">
             <span className="stat-number">{completedCount}</span>
@@ -783,10 +787,13 @@ const UploadPage = () => {
           <div className="upload-actions">
             <button
               onClick={processFiles}
-              disabled={isProcessing || pendingCount === 0}
+              disabled={isProcessing || readyCount === 0}
               className="btn btn-primary"
             >
-              {isProcessing ? '處理中...' : `處理 ${pendingCount} 個文件`}
+              {isProcessing ? 
+                `處理中... (${processingCount}/${readyCount + processingCount})` : 
+                `開始處理 ${readyCount} 個文件`
+              }
             </button>
             <button
               onClick={() => setFiles([])}

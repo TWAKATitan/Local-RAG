@@ -405,6 +405,10 @@
   font-weight: 500;
 }
 
+.file-ready .file-status-text {
+  color: var(--tech-purple);
+}
+
 .file-pending .file-status-text {
   color: var(--warning);
 }
@@ -471,6 +475,10 @@
 
 .status-icon {
   flex-shrink: 0;
+}
+
+.status-ready {
+  color: var(--tech-purple);
 }
 
 .status-pending {

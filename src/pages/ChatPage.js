@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaPaperPlane, FaRobot, FaSpinner, FaChevronDown, FaChevronUp, FaHistory, FaTrash, FaPlus, FaCog, FaBars, FaTimes } from 'react-icons/fa';
+import { FaPaperPlane, FaRobot, FaSpinner, FaChevronDown, FaChevronUp, FaTrash, FaPlus, FaCog, FaBars, FaTimes } from 'react-icons/fa';
 import api, { 
   saveChatSession, 
   loadCurrentChatSession, 
@@ -23,7 +23,6 @@ const ChatPage = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [expandedSources, setExpandedSources] = useState({});
-  const [showHistory, setShowHistory] = useState(false);
   const [chatSessions, setChatSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -107,7 +106,6 @@ const ChatPage = () => {
       const response = await setCurrentChatSession(sessionId);
       if (response.success) {
         await loadCurrentSession();
-        setShowHistory(false);
       }
     } catch (error) {
       console.error('載入會話失敗:', error);
@@ -150,22 +148,13 @@ const ChatPage = () => {
           timestamp: new Date()
         }]);
         setCurrentSessionId(response.session_id);
-        setShowHistory(false);
       }
     } catch (error) {
       console.error('創建新會話失敗:', error);
     }
   };
 
-  const toggleHistory = () => {
-    console.log('Toggle history clicked, current state:', showHistory); // 調試信息
-    if (!showHistory) {
-      // 每次打開歷史面板時都重新載入會話列表
-      loadChatSessions();
-    }
-    setShowHistory(!showHistory);
-    console.log('New state will be:', !showHistory); // 調試信息
-  };
+
 
   const toggleSources = (messageId) => {
     setExpandedSources(prev => ({
